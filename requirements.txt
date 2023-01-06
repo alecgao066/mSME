@@ -1,0 +1,7 @@
+cupy
+cupyx
+faiss
+numpy
+numba
+opencv-python
+scikit-image
