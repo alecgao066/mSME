@@ -1,0 +1,15 @@
+name: surface_extraction
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.7
+  - cupy
+  - faiss-cpu
+  - numba
+  - numpy
+  - opencv
+  - scikit-image
+  - pip
+  - pip:
+    - faiss
