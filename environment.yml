@@ -11,5 +11,6 @@ dependencies:
   - opencv
   - scikit-image
   - pip
+  - ipykernel
   - pip:
     - faiss
