@@ -25,6 +25,8 @@ class SurfaceExtraction:
             'Max' - max intensity positions
     CD: double
         Pixel class weight constant
+    RLX: double
+        Relax determination of background signals
     WW: double
         Weight of local smoothness
     THRES: double
@@ -36,6 +38,7 @@ class SurfaceExtraction:
     cluster_method = 'Projection'
     initial_estimate = 'Max'
     CD = 1
+    RLX = 1
     WW = 5
     THRES = 1
 
@@ -144,7 +147,7 @@ class SurfaceExtraction:
         # thresholds = threshold_multiotsu(tempt_sum)
         # high_thres = thresholds[0]
         high_thres = threshold_otsu(tempt_sum)
-        low_thres = threshold_otsu(tempt_sum[tempt_sum < high_thres])
+        low_thres = threshold_otsu(tempt_sum[tempt_sum < high_thres])*self.RLX
 
         #  Assign class label
         label_class = tempt_sum
@@ -152,7 +155,7 @@ class SurfaceExtraction:
         label_class /= (high_thres - low_thres)
         label_class[label_class <= 0] = 0
         label_class[label_class >= 1] = 1
-        # ind_mid_class = np.where(np.logical_and(label_class > 0, label_class < 1))
+        # ind_mid_class=np.where(np.logical_and(label_class>0,label_class<1))
         # label_class[ind_mid_class] = 0.5
 
         edge_flag = label_class * 2
@@ -318,7 +321,7 @@ class SurfaceExtraction:
             raise ValueError("initial_estimate " +
                              self.initial_estimate + " doesn't exist!")
         end = time.time()
-        print('Initialization time: {:.2f}'.format(end - start))
+        print('Initialization time: {:.2f}s'.format(end - start))
 
         #  Compute histogram for foreground and continuous weighted signals
         print("Parameter settings...")
@@ -375,7 +378,7 @@ class SurfaceExtraction:
         WA = dg/sg
         lambda1 = np.abs(np.quantile(WA, overlap_2))
         end = time.time()
-        print('Parameter settings time: {:.2f}'.format(end - start))
+        print('Parameter settings time: {:.2f}s'.format(end - start))
         return lambda1, edge_flag2, ind_max
 
     def surface_smooth(self, lambda1, edge_flag2, ind_max):
@@ -527,8 +530,66 @@ class SurfaceExtraction:
 
                 step = step * 0.99
         end = time.time()
-        print('Surface smoothing time: {:.2f}'.format(end - start))
+        print('Surface smoothing time: {:.2f}s'.format(end - start))
         return ind_maxk
+
+    def surface_extract(self, ind_maxk, depth=0, continuity=True):
+        """
+        Extract a continous surface based on surface positions.
+
+        Parameters
+        ----------
+        ind_maxk: 2D numpy array
+            Extracted surface positions
+        depth: int
+            Depth beneath the superficial surface
+        continuity: bool
+            Interpolate 3D stack for continuous extraction
+
+        Returns
+        ----------
+        indz: 2D numpy array
+            Extracted surface positions as original dimensions
+        surface: 2D numpy array
+            Extracted surface as original dimensions
+
+        """
+        #  Index intializations
+        indx = np.arange(self.h)
+        indx = np.tile(indx, [self.w, 1])
+        indy = np.arange(self.w)
+        indy = np.tile(indy, [self.h, 1])
+        indy = indy.T
+        indz = ind_maxk + depth
+        indz[indz < 0] = 0
+        indz[indz > self.l-1] = self.l-1
+
+        surface = np.zeros([self.w, self.h], dtype='int')
+        print("Extracting surface at depth {}".format(depth))
+
+        #  Countinous surface extraction
+        if (continuity):
+            indz_l = np.floor(ind_maxk).astype('int') + depth
+            indz_h = np.ceil(ind_maxk).astype('int') + depth
+
+            indz_l[indz_l < 0] = 0
+            indz_l[indz_l > self.l-1] = self.l-1
+            indz_h[indz_h < 0] = 0
+            indz_h[indz_h > self.l-1] = self.l-1
+
+            surface_indl = (indz_l, indy, indx)
+            surface_l = self.img[surface_indl].astype('int')
+            surface_indh = (indz_h, indy, indx)
+            surface_h = self.img[surface_indh].astype('int')
+
+            #  Linear interpolation
+            surface = (surface_h - surface_l) * (indz - indz_l) + surface_l
+        else:
+            indz = indz.astype('int')
+            surface_ind = (indz, indy, indx)
+            surface = self.img[surface_ind]
+
+        return indz.T, surface.T
 
 
 class RapidSurfaceExtraction(SurfaceExtraction):
@@ -683,7 +744,7 @@ class RapidSurfaceExtraction(SurfaceExtraction):
             raise ValueError("initial_estimate " +
                              self.initial_estimate + " doesn't exist!")
         end = time.time()
-        print('Initialization time: {:.2f}'.format(end - start))
+        print('Initialization time: {:.2f}s'.format(end - start))
 
         #  Memory management
         print("Parameter settings...")
@@ -757,7 +818,7 @@ class RapidSurfaceExtraction(SurfaceExtraction):
         mempool.free_all_blocks()
         pinned_mempool.free_all_blocks()
         end = time.time()
-        print('Parameter settings time: {:.2f}'.format(end - start))
+        print('Parameter settings time: {:.2f}s'.format(end - start))
         return lambda1, edge_flag2, ind_max
 
     def surface_smooth(self, lambda1, edge_flag2, ind_max):
@@ -908,20 +969,16 @@ class RapidSurfaceExtraction(SurfaceExtraction):
                 cost = np.append(cost, cost_val)
                 step = step * 0.99
 
-                # print('Itration inner ' + str(itern))
-                # mempool.free_all_blocks()
-                # pinned_mempool.free_all_blocks()
-                # print(mempool.used_bytes())
-                # print(mempool.total_bytes())
-
             #  Memory management
-            print('Itration ' + str(rn))
+            print('Resolution scale ' + str(rn))
             mempool.free_all_blocks()
             pinned_mempool.free_all_blocks()
-            print("Memory in use: {:}".format(mempool.used_bytes()))
-            print("Memory in total: {:}".format(mempool.total_bytes()))
+            print("Allocated device memory: {:.1f}MB"
+                  .format(mempool.used_bytes()/1024/1024))
+            print("Memory pool usage: {:.1f}MB"
+                  .format(mempool.total_bytes()/1024/1024))
 
         ind_maxk = cupy.asnumpy(ind_maxk)
         end = time.time()
-        print('Surface smoothing time: {:.2f}'.format(end - start))
+        print('Surface smoothing time: {:.2f}s'.format(end - start))
         return ind_maxk
