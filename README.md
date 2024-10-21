@@ -2,11 +2,11 @@
 A rapid surface extraction algorithm in Python.
 
 mSME is able to extract a 
-comprehensive and continuous surface from the 3D volume, with improvements in performance, speed, and usability.
-Implemention based on FastSME algorithm: [Basu et al.](https://openaccess.thecvf.com/content_cvpr_2018_workshops/papers/w44/Basu_FastSME_Faster_and_CVPR_2018_paper.pdf)
+comprehensive and continuous surface from the 3D volume, with improvements in performance, speed, and usability than the original FastSME algorithm: [Basu et al.](https://openaccess.thecvf.com/content_cvpr_2018_workshops/papers/w44/Basu_FastSME_Faster_and_CVPR_2018_paper.pdf)
 
-Full methods described in: G. Gao, D. Miyasato, L.A. Barner, R. Serafin, K.W. Bishop, W. Xie, A.K. Glaser, E. L. Rosenthal, L.D. True, and J.T.C. Liu, “Comprehensive surface histology of fresh resection margins with rapid open-top light-sheet (OTLS) microscopy,” IEEE Trans. Biomed. Eng. [in press]
+Full methods described in: [G. Gao, D. Miyasato, L.A. Barner, R. Serafin, K.W. Bishop, W. Xie, A.K. Glaser, E. L. Rosenthal, L.D. True, and J.T.C. Liu, “Comprehensive surface histology of fresh resection margins with rapid open-top light-sheet (OTLS) microscopy,” IEEE Trans. Biomed. Eng.](https://pmc.ncbi.nlm.nih.gov/articles/PMC10324671/)
 
+Please cite our paper if you find this package useful.
 
 ## Installation
 
